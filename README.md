@@ -8,3 +8,7 @@ Currently this repository contains binaries for the following architectures:
 1. `x86_64-apple-darwin`
 
 If you would like a binary for a different target, please send an email to contact@fuel.sh.
+
+# Recommended Configuration
+
+The following pairs of fuel-core and Sway toolchain versions are recommended.
