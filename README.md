@@ -9,6 +9,10 @@ Currently this repository contains binaries for the following architectures:
 
 If you would like a binary for a different target, please send an email to contact@fuel.sh.
 
+# Getting Started
+
+The latest documentation for getting started developing smart contracts in Sway can be found here: https://fuellabs.github.io/sway/latest.
+
 # Recommended Configuration
 
 The following pairs of fuel-core and Sway toolchain versions are recommended.
