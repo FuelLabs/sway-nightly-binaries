@@ -6,5 +6,5 @@ Currently this repository contains binaries for the following architectures:
 
 1. `x86_64-unknown-linux-gnu`
 1. `x86_64-apple-darwin`
-2. 
-3. If you would like a binary for a different target, please send an email to contact@fuel.sh.
+
+If you would like a binary for a different target, please send an email to contact@fuel.sh.
