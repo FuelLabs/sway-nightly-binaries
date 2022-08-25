@@ -19,6 +19,7 @@ jobs:
     name: Prepare release
     outputs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
+      date: ${{ steps.set-date.outputs.date }}
     steps:
       - name: Set current date
         id: set-date
@@ -127,11 +128,6 @@ jobs:
           command: install
           args: --profile=release --path ./forc-plugins/forc-client
 
-      - name: Set current date
-        id: set-date
-        run: |
-          echo "::set-output name=date::$(date +'%Y-%m-%d')"
-
       - name: Prep Assets
         id: prep_assets
         env:
@@ -139,7 +135,7 @@ jobs:
           TARGET: ${{ matrix.job.target }}
           ARCH: ${{ matrix.job.arch }}
         run: |
-          ZIP_FILE_NAME=forc-binaries-nightly-${{ steps.set-date.outputs.date }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
+          ZIP_FILE_NAME=forc-binaries-nightly-${{ needs.release.outputs.date }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
           mkdir -pv ./forc-binaries
           for binary in forc forc-fmt forc-lsp forc-explore forc-deploy forc-run; do
