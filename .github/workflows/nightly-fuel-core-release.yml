@@ -74,6 +74,7 @@ jobs:
           repository: fuellabs/fuel-core
 
       - name: Set up Docker Buildx
+        if: matrix.job.cross_image
         uses: docker/setup-buildx-action@v1
 
       - name: Setup custom cross env ${{ matrix.job.cross_image }}
@@ -159,7 +160,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          upload_url: ${{ needs.release.outputs.upload_url }}
           asset_path: ./${{ env.ZIP_FILE_NAME }}
           asset_name: ${{ env.ZIP_FILE_NAME }}
           asset_content_type: application/gzip
