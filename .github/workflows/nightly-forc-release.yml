@@ -17,9 +17,6 @@ jobs:
   release:
     runs-on: ubuntu-latest
     name: Prepare release
-    needs: [
-      build-sway-lib-core,
-    ]
     outputs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
     steps:
