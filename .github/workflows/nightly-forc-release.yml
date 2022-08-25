@@ -1,0 +1,310 @@
+name: Forc Nightly
+
+on:
+  push:
+    branches:
+      master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  REGISTRY: ghcr.io
+
+jobs:
+  build-sway-lib-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: fuellabs/sway
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v1
+      - name: Install Forc
+        run: |
+          echo "mock build"
+
+          #  build-sway-lib-std:
+          #    runs-on: ubuntu-latest
+          #    steps:
+          #      - uses: actions/checkout@v2
+          #      - uses: actions-rs/toolchain@v1
+          #        with:
+          #          profile: minimal
+          #          toolchain: stable
+          #      - uses: Swatinem/rust-cache@v1
+          #      - name: Install Forc
+          #        uses: actions-rs/cargo@v1
+          #        with:
+          #          command: install
+          #          args: --debug --path ./forc
+          #      - name: Build sway-lib-std
+          #        run: forc build --path sway-lib-std
+          #
+          #  build-forc-test-project:
+          #    runs-on: ubuntu-latest
+          #    steps:
+          #      - uses: actions/checkout@v2
+          #      - uses: actions-rs/toolchain@v1
+          #        with:
+          #          profile: minimal
+          #          toolchain: stable
+          #      - uses: Swatinem/rust-cache@v1
+          #      - name: Install Forc
+          #        uses: actions-rs/cargo@v1
+          #        with:
+          #          command: install
+          #          args: --debug --path ./forc
+          #      - name: Initialize test project
+          #        run: forc new test-proj
+          #      - name: Update project forc manifest to use local sway-lib-std
+          #        run: echo "std = { path = \"../sway-lib-std/\" }" >> test-proj/Forc.toml
+          #      - name: Update project cargo manifest with workspace
+          #        run: |
+          #          echo "
+          #
+          #          [workspace]" >> test-proj/Cargo.toml
+          #      - name: Build test project
+          #        run: forc build --path test-proj
+          #      - name: Run test project's test suite
+          #        run: cd test-proj && forc test
+          #
+          #  cargo-build-workspace:
+          #    runs-on: ubuntu-latest
+          #    steps:
+          #      - uses: actions/checkout@v2
+          #      - uses: actions-rs/toolchain@v1
+          #        with:
+          #          profile: minimal
+          #          toolchain: stable
+          #      - uses: Swatinem/rust-cache@v1
+          #      - uses: actions-rs/cargo@v1
+          #        name: Cargo Build Workspace
+          #        with:
+          #          command: build
+          #          args: --locked --workspace --all-features --all-targets
+          #        env:
+          #          RUSTFLAGS: "-D warnings"
+          #
+          #  cargo-run-e2e-test:
+          #    runs-on: ubuntu-latest
+          #    services:
+          #      fuel-core:
+          #        image: ghcr.io/fuellabs/fuel-core:v0.9.4
+          #        ports:
+          #          - 4000:4000
+          #    steps:
+          #      - uses: actions/checkout@v2
+          #      - uses: actions-rs/toolchain@v1
+          #        with:
+          #          profile: minimal
+          #          toolchain: stable
+          #      - uses: Swatinem/rust-cache@v1
+          #      - name: Cargo Run E2E Tests
+          #        uses: actions-rs/cargo@v1
+          #        with:
+          #          command: run
+          #          args: --locked --release --bin test -- --locked
+          #
+          #  # TODO: Remove this upon merging std tests with the rest of the E2E tests.
+          #  cargo-test-lib-std:
+          #    runs-on: ubuntu-latest
+          #    services:
+          #      fuel-core:
+          #        image: ghcr.io/fuellabs/fuel-core:v0.9.4
+          #        ports:
+          #          - 4000:4000
+          #    steps:
+          #      - uses: actions/checkout@v2
+          #      - uses: actions-rs/toolchain@v1
+          #        with:
+          #          profile: minimal
+          #          toolchain: stable
+          #      - uses: Swatinem/rust-cache@v1
+          #      - name: Build All Tests
+          #        run: cd test/src/sdk-harness && bash build.sh --locked && cd ../../../
+          #      - name: Cargo Test sway-lib-std
+          #        uses: actions-rs/cargo@v1
+          #        with:
+          #          command: test
+          #          args: --manifest-path ./test/src/sdk-harness/Cargo.toml -- --test-threads=1 --nocapture
+          #
+          #  cargo-test-workspace:
+          #    runs-on: ubuntu-latest
+          #    steps:
+          #      - uses: actions/checkout@v2
+          #      - uses: actions-rs/toolchain@v1
+          #        with:
+          #          profile: minimal
+          #          toolchain: stable
+          #      - uses: Swatinem/rust-cache@v1
+          #      - name: Run tests
+          #        uses: actions-rs/cargo@v1
+          #        with:
+          #          command: test
+          #          args: --locked
+
+  release:
+    runs-on: ubuntu-latest
+    name: Prepare release
+    needs: [
+      build-sway-lib-core,
+    ]
+    outputs:
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
+    steps:
+      - name: Set current date
+        id: set-date
+        run: |
+          echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
+      - name: Create Release
+        id: create-release
+        uses: ncipollo/release-action@v1
+        with:
+          name: forc-binaries-nightly-${{ steps.set-date.outputs.date }}
+          tag: forc-binaries-nightly-${{ steps.set-date.outputs.date }}
+          allowUpdates: true
+          removeArtifacts: true
+          draft: false 
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  install-and-upload-forc-binaries:
+    name: Install and upload forc binaries to release
+    needs: release
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      matrix:
+        job:
+          - os: ubuntu-latest
+            platform: linux
+            target: x86_64-unknown-linux-gnu
+            arch: amd64
+            svm_target_platform: linux-amd64
+          - os: ubuntu-latest
+            platform: linux
+            target: aarch64-unknown-linux-gnu
+            arch: arm64
+            svm_target_platform: linux-aarch64
+          - os: macos-latest
+            platform: darwin
+            target: x86_64-apple-darwin
+            arch: amd64
+            svm_target_platform: macosx-amd64
+          - os: macos-latest
+            platform: darwin
+            target: aarch64-apple-darwin
+            arch: arm64
+            svm_target_platform: macosx-aarch64
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+        with:
+          repository: fuellabs/sway
+
+      - name: LS
+        run: |
+          ls
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.job.target }}
+          override: true
+
+      - uses: Swatinem/rust-cache@v1
+        with:
+          cache-on-failure: true
+
+      - name: Apple M1 setup
+        if: ${{ matrix.job.target == 'aarch64-apple-darwin' }}
+        run: |
+          echo "SDKROOT=$(xcrun -sdk macosx --show-sdk-path)" >> $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version)" >> $GITHUB_ENV
+      - name: Linux ARM setup
+        if: ${{ matrix.job.target == 'aarch64-unknown-linux-gnu' }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+      - name: Install Forc
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --profile=release --path ./forc
+
+      - name: Install Forc-Fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --profile=release --path ./forc-plugins/forc-fmt
+
+      - name: Install Forc-LSP
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --profile=release --path ./forc-plugins/forc-lsp
+
+      - name: Install Forc-Explore
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --profile=release --path ./forc-plugins/forc-explore
+
+      - name: Install Forc-Client
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --profile=release --path ./forc-plugins/forc-client
+
+      - name: Set current date
+        id: set-date
+        run: |
+          echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
+      - name: Prep Assets
+        id: prep_assets
+        env:
+          PLATFORM_NAME: ${{ matrix.job.platform }}
+          TARGET: ${{ matrix.job.target }}
+          ARCH: ${{ matrix.job.arch }}
+        run: |
+          ZIP_FILE_NAME=forc-binaries-nightly-${{ steps.set-date.outputs.date }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
+          echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
+          mkdir -pv ./forc-binaries
+          for binary in forc forc-fmt forc-lsp forc-explore forc-deploy forc-run; do
+            cp $(which ${binary}) ./forc-binaries
+          done
+          tar -czvf $ZIP_FILE_NAME ./forc-binaries
+
+      - name: Archive forc binaries
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: ./${{ env.ZIP_FILE_NAME }}
+          asset_name: ${{ env.ZIP_FILE_NAME }}
+          asset_content_type: application/gzip
+
+      - name: Notify if Job Fails
+        uses: ravsamhq/notify-slack-action@v1
+        if: always()
+        with:
+          status: ${{ job.status }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          notification_title: "{workflow} has {status_message}"
+          message_format: "{emoji} *{workflow}* {status_message} in <{repo_url}|{repo}> : <{run_url}|View Run Results>"
+          footer: ""
+          notify_when: "failure"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_NOTIFY_BUILD }}
