@@ -23,7 +23,7 @@ jobs:
       today: ${{ steps.set-date.outputs.today }}
     steps:
       - name: Set current date
-        id: today set-dates
+        id: set-date
         run: |
           TODAY=$(date +'%Y-%m-%d')
           echo "::set-output name=today::$TODAY"
@@ -32,7 +32,7 @@ jobs:
       - name: Set release notes
         id: set-body
         run: |
-          git log --after="${{ steps.set-dates.outputs.yesterday }} 00:00" --before="${{ steps.set-dates.outputs.today }} 00:00" --oneline >> body.md
+          git log --after="${{ steps.set-date.outputs.yesterday }} 00:00" --before="${{ steps.set-date.outputs.today }} 00:00" --oneline >> body.md
           cat body.md
 
       - name: Create Release
