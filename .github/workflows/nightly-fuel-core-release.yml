@@ -20,21 +20,30 @@ jobs:
     name: Prepare release
     outputs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
-      date: ${{ steps.set-date.outputs.date }}
+      today: ${{ steps.set-date.outputs.today }}
     steps:
       - name: Set current date
-        id: set-date
+        id: today set-dates
         run: |
-          echo "::set-output name=date::$(date +'%Y-%m-%d')"
+          TODAY=$(date +'%Y-%m-%d')
+          echo "::set-output name=today::$TODAY"
+          echo "::set-output name=yesterday::$(date --date="$TODAY -1 day" +'%Y-%m-%d')"
+
+      - name: Set release notes
+        id: set-body
+        run: |
+          git log --after="${{ steps.set-dates.outputs.yesterday }} 00:00" --before="${{ steps.set-dates.outputs.today }} 00:00" --oneline >> body.md
+          cat body.md
 
       - name: Create Release
         id: create-release
         uses: ncipollo/release-action@v1
         with:
-          name: fuel-core-nightly-${{ steps.set-date.outputs.date }}
-          tag: fuel-core-nightly-${{ steps.set-date.outputs.date }}
+          name: fuel-core-nightly-${{ steps.set-date.outputs.today }}
+          tag: fuel-core-nightly-${{ steps.set-date.outputs.today }}
           allowUpdates: true
           removeArtifacts: true
+          bodyFile: "body.md"
           draft: false 
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -148,7 +157,7 @@ jobs:
           PLATFORM_NAME: ${{ matrix.job.platform }}
           TARGET: ${{ matrix.job.target }}
         run: |
-          ARTIFACT="fuel-core-nightly-${{ needs.release.outputs.date }}-${{ env.TARGET }}"
+          ARTIFACT="fuel-core-nightly-${{ needs.release.outputs.today }}-${{ env.TARGET }}"
           ZIP_FILE_NAME="$ARTIFACT.tar.gz"
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
           # create zip file

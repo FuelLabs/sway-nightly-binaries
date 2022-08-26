@@ -19,21 +19,30 @@ jobs:
     name: Prepare release
     outputs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
-      date: ${{ steps.set-date.outputs.date }}
+      today: ${{ steps.set-dates.outputs.today }}
     steps:
       - name: Set current date
-        id: set-date
+        id: today set-dates
         run: |
-          echo "::set-output name=date::$(date +'%Y-%m-%d')"
+          TODAY=$(date +'%Y-%m-%d')
+          echo "::set-output name=today::$TODAY"
+          echo "::set-output name=yesterday::$(date --date="$TODAY -1 day" +'%Y-%m-%d')"
+
+      - name: Set release notes
+        id: set-body
+        run: |
+          git log --after="${{ steps.set-dates.outputs.yesterday }} 00:00" --before="${{ steps.set-dates.outputs.today }} 00:00" --oneline >> body.md
+          cat body.md
 
       - name: Create Release
         id: create-release
         uses: ncipollo/release-action@v1
         with:
-          name: forc-binaries-nightly-${{ steps.set-date.outputs.date }}
-          tag: forc-binaries-nightly-${{ steps.set-date.outputs.date }}
+          name: forc-binaries-nightly-${{ steps.set-dates.outputs.today }}
+          tag: forc-binaries-nightly-${{ steps.set-dates.outputs.today }}
           allowUpdates: true
           removeArtifacts: true
+          bodyFile: "body.md"
           draft: false 
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -135,7 +144,7 @@ jobs:
           TARGET: ${{ matrix.job.target }}
           ARCH: ${{ matrix.job.arch }}
         run: |
-          ZIP_FILE_NAME=forc-binaries-nightly-${{ needs.release.outputs.date }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
+          ZIP_FILE_NAME=forc-binaries-nightly-${{ needs.release.outputs.today }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
           mkdir -pv ./forc-binaries
           for binary in forc forc-fmt forc-lsp forc-explore forc-deploy forc-run; do
