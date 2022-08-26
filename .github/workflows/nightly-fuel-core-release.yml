@@ -22,6 +22,12 @@ jobs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
       today: ${{ steps.set-date.outputs.today }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          repository: FuelLabs/fuel-core
+          fetch-depth: 0
+
       - name: Set current date
         id: set-date
         run: |
