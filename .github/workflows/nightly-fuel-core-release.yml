@@ -38,6 +38,7 @@ jobs:
       - name: Set release notes
         id: set-body
         run: |
+          touch body.md
           git log --after="${{ steps.set-date.outputs.yesterday }} 00:00" --before="${{ steps.set-date.outputs.today }} 00:00" --oneline >> body.md
           cat body.md
 
