@@ -42,7 +42,7 @@ jobs:
           LATEST_TAG=$(git describe --tags --abbrev=0)
           # trim v
           LATEST_TAG="${LATEST_TAG#v}"
-          echo "::set-output name=tag::LATEST_TAG"
+          echo "::set-output name=tag::$LATEST_TAG"
 
       - name: Set release notes
         id: set-body
