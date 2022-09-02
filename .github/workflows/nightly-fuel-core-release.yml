@@ -52,8 +52,8 @@ jobs:
         id: create-release
         uses: ncipollo/release-action@v1
         with:
-          name: fuel-core-nightly-${{ steps.set-date.outputs.today }}
-          tag: fuel-core-nightly-${{ steps.set-date.outputs.today }}
+          name: fuel-core-${{ steps.set-tag.outputs.tag }}-nightly-${{ steps.set-date.outputs.today }}
+          tag: fuel-core-${{ steps.set-tag.outputs.tag }}-nightly-${{ steps.set-date.outputs.today }}
           allowUpdates: true
           removeArtifacts: true
           bodyFile: "body.md"
