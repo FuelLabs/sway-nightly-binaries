@@ -1,6 +1,6 @@
 touch body.md
 touch body.tmp
-git log --after="${{ steps.set-date.outputs.yesterday }} 00:00" --before="${{ steps.set-date.outputs.today }} 00:00" --oneline >> body.tmp
+git log --after="${2} 00:00" --before="${3} 00:00" --oneline >> body.tmp
 echo "Generating release notes from repo: ${1}"
 
 while read -r line; do
