@@ -44,9 +44,14 @@ jobs:
           LATEST_TAG="${LATEST_TAG#v}"
           echo "::set-output name=tag::$LATEST_TAG"
 
+      - name: Checkout sources
+        uses: actions/checkout@v3
+        with:
+          path: scripts
+
       - name: Create release notes
         run: |
-          ./.github/workflows/scripts/write-release-notes.sh fuel-core
+          .scripts/.github/workflows/scripts/write-release-notes.sh fuel-core
 
       - name: Create Release
         id: create-release
