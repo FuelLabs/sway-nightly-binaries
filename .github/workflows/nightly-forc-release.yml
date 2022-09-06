@@ -50,7 +50,7 @@ jobs:
 
       - name: Create release notes
         run: |
-          ./scripts/.github/workflows/scripts/write-release-notes.sh sway
+          ./scripts/.github/workflows/scripts/write-release-notes.sh sway ${{ steps.set-date.outputs.yesterday }} ${{ steps.set-date.outputs.today }} 
 
       - name: Create Release
         id: create-release
