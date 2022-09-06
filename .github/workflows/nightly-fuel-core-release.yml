@@ -51,7 +51,7 @@ jobs:
 
       - name: Create release notes
         run: |
-          .scripts/.github/workflows/scripts/write-release-notes.sh fuel-core
+          ./scripts/.github/workflows/scripts/write-release-notes.sh fuel-core
 
       - name: Create Release
         id: create-release
