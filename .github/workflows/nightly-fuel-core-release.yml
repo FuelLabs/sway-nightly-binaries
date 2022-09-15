@@ -23,6 +23,7 @@ jobs:
       today: ${{ steps.set-date.outputs.today }}
       tag: ${{ steps.set-tag.outputs.tag }}
       name: ${{ steps.set-name.outputs.name }}
+      commit_hash: ${{ steps.set-commit-hash.outputs.commit_hash }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -45,18 +46,6 @@ jobs:
         id: set-commit-hash
         run: |
           echo "::set-output name=commit_hash::$(git rev-parse --short HEAD)"
-
-      - name: Install cargo-edit
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: cargo-edit
-
-      - name: Bump patch version and add nightly pre-release tag
-        uses: actions-rs/cargo@v1
-        with:
-          command: set-version
-          args: --metadata nightly.${{ steps.set-date.outputs.today }}.${{ steps.set-commit-hash.outputs.commit_hash }}
 
       - name: Set tag 
         id: set-tag
@@ -155,6 +144,18 @@ jobs:
           toolchain: stable
           target: ${{ matrix.job.target }}
           override: true
+
+      - name: Install cargo-edit
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-edit
+
+      - name: Bump patch version and add nightly pre-release tag
+        uses: actions-rs/cargo@v1
+        with:
+          command: set-version
+          args: --metadata nightly.${{ needs.release.outputs.today }}.${{ needs.release.outputs.commit_hash }}
 
       - uses: Swatinem/rust-cache@v1
         with:
