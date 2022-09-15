@@ -21,12 +21,17 @@ jobs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
       today: ${{ steps.set-date.outputs.today }}
       tag: ${{ steps.set-tag.outputs.tag }}
+      name: ${{ steps.set-name.outputs.name }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
         with:
           repository: FuelLabs/sway
           fetch-depth: 0
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
 
       - name: Set current date
         id: set-date
@@ -35,6 +40,23 @@ jobs:
           echo "::set-output name=today::$TODAY"
           echo "::set-output name=yesterday::$(date --date="$TODAY -1 day" +'%Y-%m-%d')"
 
+      - name: Set commit hash
+        id: set-commit-hash
+        run: |
+          echo "::set-output name=commit_hash::$(git rev-parse --short HEAD)"
+
+      - name: Install cargo-edit
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-edit
+
+      - name: Bump patch version and add nightly pre-release tag
+        uses: actions-rs/cargo@v1
+        with:
+          command: set-version
+          args: --metadata nightly.${{  steps.set-date.outputs.today }}.${{ steps.set-commit-hash.outputs.commit_hash }}
+
       - name: Set tag 
         id: set-tag
         run: |
@@ -42,6 +64,12 @@ jobs:
           # trim v
           LATEST_TAG="${LATEST_TAG#v}"
           echo "::set-output name=tag::$LATEST_TAG"
+
+      - name: Set name
+        id: set-name
+        run: |
+          NAME=forc-binaries-${{ steps.set-tag.outputs.tag }}+nightly.${{ steps.set-date.outputs.today }}.${{ steps.set-commit-hash.outputs.commit_hash }}
+          echo "::set-output name=name::$NAME"
 
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -56,8 +84,8 @@ jobs:
         id: create-release
         uses: ncipollo/release-action@v1
         with:
-          name: forc-binaries-${{ steps.set-tag.outputs.tag }}-nightly-${{ steps.set-date.outputs.today }}
-          tag: forc-binaries-${{ steps.set-tag.outputs.tag }}-nightly-${{ steps.set-date.outputs.today }}
+          name: ${{ steps.set-name.outputs.name }}
+          tag: ${{ steps.set-name.outputs.name }}
           allowUpdates: true
           removeArtifacts: true
           bodyFile: "body.md"
@@ -158,7 +186,7 @@ jobs:
           TARGET: ${{ matrix.job.target }}
           ARCH: ${{ matrix.job.arch }}
         run: |
-          ZIP_FILE_NAME=forc-binaries-${{ needs.release.outputs.tag }}-nightly-${{ needs.release.outputs.today }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
+          ZIP_FILE_NAME={{ needs.release.outputs.name }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
           mkdir -pv ./forc-binaries
           for binary in forc forc-fmt forc-lsp forc-explore forc-deploy forc-run; do
