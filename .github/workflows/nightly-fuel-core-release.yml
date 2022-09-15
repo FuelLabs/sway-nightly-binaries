@@ -55,7 +55,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: set-version
-          args: --metadata nightly.${{  steps.set-date.outputs.today }}.${{ steps.set-commit-hash.outputs.commit_hash }}
+          args: --metadata nightly.${{ steps.set-date.outputs.today }}.${{ steps.set-commit-hash.outputs.commit_hash }}
 
       - name: Set tag 
         id: set-tag
