@@ -31,10 +31,6 @@ jobs:
           repository: FuelLabs/fuel-core
           fetch-depth: 0
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-
       - name: Set current date
         id: set-date
         run: |
