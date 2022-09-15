@@ -29,12 +29,33 @@ jobs:
           repository: FuelLabs/fuel-core
           fetch-depth: 0
 
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
       - name: Set current date
         id: set-date
         run: |
           TODAY=$(date +'%Y-%m-%d')
           echo "::set-output name=today::$TODAY"
           echo "::set-output name=yesterday::$(date --date="$TODAY -1 day" +'%Y-%m-%d')"
+
+      - name: Set commit hash
+        id: set-commit-hash
+        run: |
+          echo "::set-output name=commit_hash::$(git rev-parse --short HEAD)"
+
+      - name: Install cargo-edit
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-edit
+
+      - name: Bump patch version and add nightly pre-release tag
+        uses: actions-rs/cargo@v1
+        with:
+          command: set-version
+          args: --metadata nightly.${{  steps.set-date.outputs.today }}.${{ steps.set-commit-hash.outputs.commit_hash }}
 
       - name: Set tag 
         id: set-tag
@@ -44,6 +65,11 @@ jobs:
           LATEST_TAG="${LATEST_TAG#v}"
           echo "::set-output name=tag::$LATEST_TAG"
 
+      - name: Set name
+        id: set-name
+        run: |
+          NAME=fuel-core-${{ steps.set-tag.outputs.tag }}+nightly.${{ steps.set-date.outputs.today }}.${{ steps.set-commit-hash.outputs.commit_hash }}
+          echo "::set-output name=name::$NAME"
       - name: Checkout sources
         uses: actions/checkout@v3
         with:
@@ -57,8 +83,8 @@ jobs:
         id: create-release
         uses: ncipollo/release-action@v1
         with:
-          name: fuel-core-${{ steps.set-tag.outputs.tag }}-nightly-${{ steps.set-date.outputs.today }}
-          tag: fuel-core-${{ steps.set-tag.outputs.tag }}-nightly-${{ steps.set-date.outputs.today }}
+          name: ${{ steps.set-name.outputs.name }}
+          tag: ${{ steps.set-name.outputs.name }}
           allowUpdates: true
           removeArtifacts: true
           bodyFile: "body.md"
@@ -175,7 +201,7 @@ jobs:
           PLATFORM_NAME: ${{ matrix.job.platform }}
           TARGET: ${{ matrix.job.target }}
         run: |
-          ARTIFACT="fuel-core-${{ needs.release.outputs.tag }}-nightly-${{ needs.release.outputs.today }}-${{ env.TARGET }}"
+          ARTIFACT="{{ needs.release.outputs.name }}-${{ env.TARGET }}"
           ZIP_FILE_NAME="$ARTIFACT.tar.gz"
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
           # create zip file
