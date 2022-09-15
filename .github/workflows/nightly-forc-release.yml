@@ -186,7 +186,7 @@ jobs:
           TARGET: ${{ matrix.job.target }}
           ARCH: ${{ matrix.job.arch }}
         run: |
-          ZIP_FILE_NAME={{ needs.release.outputs.name }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
+          ZIP_FILE_NAME=${{ needs.release.outputs.name }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
           mkdir -pv ./forc-binaries
           for binary in forc forc-fmt forc-lsp forc-explore forc-deploy forc-run; do

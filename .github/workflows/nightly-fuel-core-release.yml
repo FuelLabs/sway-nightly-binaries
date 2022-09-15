@@ -22,6 +22,7 @@ jobs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
       today: ${{ steps.set-date.outputs.today }}
       tag: ${{ steps.set-tag.outputs.tag }}
+      name: ${{ steps.set-name.outputs.name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -201,7 +202,7 @@ jobs:
           PLATFORM_NAME: ${{ matrix.job.platform }}
           TARGET: ${{ matrix.job.target }}
         run: |
-          ARTIFACT="{{ needs.release.outputs.name }}-${{ env.TARGET }}"
+          ARTIFACT="${{ needs.release.outputs.name }}-${{ env.TARGET }}"
           ZIP_FILE_NAME="$ARTIFACT.tar.gz"
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
           # create zip file
