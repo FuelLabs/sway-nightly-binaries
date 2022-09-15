@@ -33,9 +33,9 @@ jobs:
       - name: Set current date
         id: set-date
         run: |
-          TODAY=$(date +'%Y-%m-%d')
+          TODAY=$(date +'%Y%m%d')
           echo "::set-output name=today::$TODAY"
-          echo "::set-output name=yesterday::$(date --date="$TODAY -1 day" +'%Y-%m-%d')"
+          echo "::set-output name=yesterday::$(date --date="$TODAY -1 day" +'%Y%m%d')"
 
       - name: Set commit hash
         id: set-commit-hash
