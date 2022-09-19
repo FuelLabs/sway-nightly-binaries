@@ -80,7 +80,6 @@ jobs:
   build-release:
     name: Release forc-client binaries
     runs-on: ${{ matrix.job.os }}
-    if: github.event_name == 'release' && github.event.action == 'published'
     needs: release
     strategy:
       matrix:
