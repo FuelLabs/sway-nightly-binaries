@@ -166,26 +166,13 @@ jobs:
 
       - name: Prep Assets
         id: prep_assets
-        env:
-          PLATFORM_NAME: ${{ matrix.job.platform }}
-          TARGET: ${{ matrix.job.target }}
-          ARCH: ${{ matrix.job.arch }}
         run: |
-          # Get tag name
-          # See: https://github.community/t5/GitHub-Actions/How-to-get-just-the-tag-name/m-p/32167/highlight/true#M1027
-          FORC_CLIENT_VERSION="${GITHUB_REF#refs/tags/}"
-
-          # trim v from tag prefix
-          FORC_CLIENT_VERSION="${FORC_CLIENT_VERSION#v}" 
-          echo "version is: $FORC_CLIENT_VERSION"
-
-          # setup artifact filename
-          ARTIFACT="forc-client-$FORC_CLIENT_VERSION-${{ env.TARGET }}"
+          ARTIFACT="${{ needs.release.outputs.name }}-${{ matrix.job.target }}"
           ZIP_FILE_NAME="$ARTIFACT.tar.gz"
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
-
           # create zip file
           mkdir -pv "$ARTIFACT"
+
           cp "target/${{ matrix.job.target }}/release/forc-deploy" "$ARTIFACT"
           cp "target/${{ matrix.job.target }}/release/forc-run" "$ARTIFACT"
 
