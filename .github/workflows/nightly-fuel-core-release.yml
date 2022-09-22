@@ -35,13 +35,13 @@ jobs:
         id: set-date
         run: |
           TODAY=$(date +'%Y%m%d')
-          echo "::set-output name=today::$TODAY"
+          ecto "::set-output name=today::$TODAY"
           echo "::set-output name=yesterday::$(date --date="$TODAY -1 day" +'%Y%m%d')"
 
       - name: Set commit hash
         id: set-commit-hash
         run: |
-          echo "::set-output name=commit_hash::$(git rev-parse --short HEAD)"
+          echo "::set-output name=commit_hash::$(git rev-parse --short=12 HEAD)"
 
       - name: Set tag 
         id: set-tag
