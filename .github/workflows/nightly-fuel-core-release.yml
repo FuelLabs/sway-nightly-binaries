@@ -35,7 +35,7 @@ jobs:
         id: set-date
         run: |
           TODAY=$(date +'%Y%m%d')
-          ecto "::set-output name=today::$TODAY"
+          echo "::set-output name=today::$TODAY"
           echo "::set-output name=yesterday::$(date --date="$TODAY -1 day" +'%Y%m%d')"
 
       - name: Set commit hash
