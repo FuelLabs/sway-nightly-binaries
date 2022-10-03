@@ -170,6 +170,11 @@ jobs:
           command: install
           args: --profile=release --path ./forc-plugins/forc-explore
 
+      - name: Install Forc-Client
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --profile=release --path ./forc-plugins/forc-client
 
       - name: Prep Assets
         id: prep_assets
@@ -181,7 +186,7 @@ jobs:
           ZIP_FILE_NAME=${{ needs.release.outputs.name }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
           mkdir -pv ./forc-binaries
-          for binary in forc forc-fmt forc-lsp forc-explore; do
+          for binary in forc forc-fmt forc-lsp forc-explore forc-deploy forc-run; do
             cp $(which ${binary}) ./forc-binaries
           done
           tar -czvf $ZIP_FILE_NAME ./forc-binaries
