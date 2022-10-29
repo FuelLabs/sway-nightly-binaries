@@ -82,7 +82,9 @@ jobs:
     runs-on: ${{ matrix.job.os }}
     # Only do this job if publishing a release
     needs: release
+    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         job:
           - os: ubuntu-latest
