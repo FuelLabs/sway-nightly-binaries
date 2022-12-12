@@ -1,0 +1,182 @@
+name: Forc Index Release (nightly) 
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  REGISTRY: ghcr.io
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    name: Prepare release
+    outputs:
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
+      today: ${{ steps.set-date.outputs.today }}
+      tag: ${{ steps.set-tag.outputs.tag }}
+      name: ${{ steps.set-name.outputs.name }}
+      commit_hash: ${{ steps.set-commit-hash.outputs.commit_hash }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+        with:
+          repository: FuelLabs/fuel-indexer
+          fetch-depth: 0
+
+      - name: Set current date
+        id: set-date
+        run: |
+          TODAY=$(date +'%Y%m%d')
+          echo "::set-output name=today::$TODAY"
+          echo "::set-output name=yesterday::$(date --date="$TODAY -1 day" +'%Y%m%d')"
+
+      - name: Set commit hash
+        id: set-commit-hash
+        run: |
+          echo "::set-output name=commit_hash::$(git rev-parse --short=10 HEAD)"
+
+      - name: Set tag 
+        id: set-tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          # trim v
+          LATEST_TAG="${LATEST_TAG#v}"
+          echo "::set-output name=tag::$LATEST_TAG"
+
+      - name: Set name
+        id: set-name
+        run: |
+          NAME=fuel-indexer-${{ steps.set-tag.outputs.tag }}+nightly.${{ steps.set-date.outputs.today }}.${{ steps.set-commit-hash.outputs.commit_hash }}
+          echo "::set-output name=name::$NAME"
+
+      - name: Checkout sources
+        uses: actions/checkout@v3
+        with:
+          path: scripts
+
+      - name: Create release notes
+        run: |
+          ./scripts/.github/workflows/scripts/write-release-notes.sh fuel-indexer ${{ steps.set-date.outputs.yesterday }} ${{ steps.set-date.outputs.today }} 
+
+      - name: Create Release
+        id: create-release
+        uses: ncipollo/release-action@v1
+        with:
+          name: ${{ steps.set-name.outputs.name }}
+          tag: ${{ steps.set-name.outputs.name }}
+          allowUpdates: true
+          removeArtifacts: true
+          bodyFile: "body.md"
+          draft: false 
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-release:
+    name: Release fuel-Fuel Indexer 
+    runs-on: ${{ matrix.job.os }}
+    needs: release
+    strategy:
+      matrix:
+        job:
+          - os: ubuntu-latest
+            platform: linux
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            platform: linux
+            target: aarch64-unknown-linux-gnu
+          - os: macos-latest
+            platform: darwin
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            platform: darwin
+            target: aarch64-apple-darwin
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+        with:
+          repository: fuellabs/fuel-indexer
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.job.target }}
+          override: true
+
+      - uses: Swatinem/rust-cache@v1
+        with:
+          cache-on-failure: true
+          key: "${{ matrix.job.target }}"
+
+            
+      - name: Install cargo-edit
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-edit
+
+      - name: Bump patch version and add nightly pre-release tag
+        uses: actions-rs/cargo@v1
+        with:
+          command: set-version
+          args: --metadata nightly.${{  needs.release.outputs.today }}.${{ needs.release.outputs.commit_hash }}
+
+      - name: Use Cross
+        uses: baptiste0928/cargo-install@v1
+        with:
+          crate: cross
+          cache-key: "${{ matrix.job.target }}"
+
+      - name: Build fuel-
+Fuel Indexer run: |
+          cross build --profile=release --target ${{ matrix.job.target }} -p fuel-
+
+Fuel Indexer - name: Strip release binary x86_64-linux-gnu
+        if: matrix.job.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          strip "target/${{ matrix.job.target }}/release/fuel-"
+
+Fuel Indexer - name: Strip release binary aarch64-linux-gnu
+        if: matrix.job.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          docker run --rm -v \
+          "$PWD/target:/target:Z" \
+          ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main \
+          aarch64-linux-gnu-strip \
+          /target/aarch64-unknown-linux-gnu/release/fuel-
+
+Fuel Indexer - name: Strip release binary mac
+        if: matrix.job.os == 'macos-latest'
+        run: |
+          strip -x "target/${{ matrix.job.target }}/release/fuel-"
+
+Fuel Indexer - name: Prep Assets
+        id: prep_assets
+        run: |
+          ARTIFACT="${{ needs.release.outputs.name }}-${{ matrix.job.target }}"
+          ZIP_FILE_NAME="$ARTIFACT.tar.gz"
+          echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
+          # create zip file
+          mkdir -pv "$ARTIFACT"
+
+          cp "target/${{ matrix.job.target }}/release/fuel-Fuel Indexer "$ARTIFACT"
+
+          tar -czvf $ZIP_FILE_NAME "$ARTIFACT"
+
+      - name: Upload release archive
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: ./${{ env.ZIP_FILE_NAME }}
+          asset_name: ${{ env.ZIP_FILE_NAME }}
+          asset_content_type: application/gzip
+
