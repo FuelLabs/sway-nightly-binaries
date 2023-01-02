@@ -1,0 +1,82 @@
+name: Create Nightly Release
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  REGISTRY: ghcr.io
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    name: Create release
+    outputs:
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
+      today: ${{ steps.set-date.outputs.today }}
+      release_name: ${{ steps.set-name.outputs.release_name }}
+    steps:
+      - name: Set current date
+        id: set-date
+        run: |
+          TODAY=$(date +'%Y%m%d')
+          echo "::set-output name=today::$TODAY"
+
+      - name: Set name
+        id: set-name
+        run: |
+          TODAY_HYPHENATED=$(date +'%Y-%m-%d')
+          echo "::set-output name=today::$TODAY"
+          NAME=nightly-${{ steps.set-date.outputs.today }}
+          echo "::set-output name=release_name::$NAME"
+
+      - name: Checkout sources
+        uses: actions/checkout@v3
+        with:
+          path: scripts
+
+      - name: Create Release
+        id: create-release
+        uses: ncipollo/release-action@v1
+        with:
+          name: ${{ steps.set-name.outputs.release_name }}
+          tag: ${{ steps.set-name.outputs.release_name }}
+          allowUpdates: true
+          removeArtifacts: true
+          draft: false 
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+        
+  release-forc:
+    needs: create-release
+    uses: ./.github/workflows/nightly-forc-release.yml
+    with:
+      upload_url: ${{ needs.create-release.outputs.upload_url }}
+      date: ${{ needs.create-release.outputs.today }}
+    
+  release-fuel-core:
+    needs: create-release
+    uses: ./.github/workflows/nightly-fuel-core-release.yml
+    with:
+      upload_url: ${{ needs.create-release.outputs.upload_url }}
+      date: ${{ needs.create-release.outputs.today }}
+    
+  release-forc-explorer:
+    needs: create-release
+    uses: ./.github/workflows/nightly-forc-explorer-release.yml
+    with:
+      upload_url: ${{ needs.create-release.outputs.upload_url }}
+      date: ${{ needs.create-release.outputs.today }}
+
+  release-forc-wallet:
+    needs: create-release
+    uses: ./.github/workflows/nightly-forc-wallet-release.yml
+    with:
+      upload_url: ${{ needs.create-release.outputs.upload_url }}
+      date: ${{ needs.create-release.outputs.today }}
