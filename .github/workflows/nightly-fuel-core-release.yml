@@ -112,6 +112,11 @@ jobs:
           target: ${{ matrix.job.target }}
           override: true
 
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1.1.2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install cargo-edit
         uses: actions-rs/cargo@v1
         with:
