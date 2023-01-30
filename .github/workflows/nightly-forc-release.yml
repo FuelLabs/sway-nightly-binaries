@@ -116,13 +116,7 @@ jobs:
 
       - name: Build forc binaries
         run: |
-          cross build --profile=release --target ${{ matrix.job.target }} --bins
-
-      - name: Install forc-doc
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --profile=release --path ./forc-plugins/forc-doc
+          cross build --profile=release --locked --target ${{ matrix.job.target }} --bins
 
       - name: Prep Assets
         id: prep_assets
