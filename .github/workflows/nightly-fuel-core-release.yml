@@ -105,12 +105,10 @@ jobs:
           ci/macos-install-packages.sh
 
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: stable
-          target: ${{ matrix.job.target }},"wasm32-unknown-unknown"
-          override: true
+          targets: ${{ matrix.job.target }},"wasm32-unknown-unknown"
 
       - name: Install cargo-edit
         uses: actions-rs/cargo@v1
