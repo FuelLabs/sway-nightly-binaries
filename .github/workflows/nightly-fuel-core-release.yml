@@ -15,6 +15,7 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
   REGISTRY: ghcr.io
+  RUST_VERSION: 1.76.0
 
 jobs:
   prepare-release:
@@ -107,7 +108,7 @@ jobs:
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_VERSION }}
           targets: ${{ matrix.job.target }},"wasm32-unknown-unknown"
 
       - name: Install cargo-edit
