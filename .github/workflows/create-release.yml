@@ -89,13 +89,11 @@ jobs:
     steps:
     - name: Ensure release-forc succeeded
       run: |
-        if [ 
-          "${{ needs.create-release.result }}" != "success"
-          || "${{ needs.release-forc.result }}" != "success"
-          || "${{ needs.release-fuel-core.result }}" != "success"
-          || "${{ needs.release-forc-explorer.result }}" != "success"
-          || "${{ needs.release-forc-wallet }}" != "success"
-        ]; then
+        if [ "${{ needs.create-release.result }}" != "success" ] || \
+          [ "${{ needs.release-forc.result }}" != "success" ] || \
+          [ "${{ needs.release-fuel-core.result }}" != "success" ] || \
+          [ "${{ needs.release-forc-explorer.result }}" != "success" ] || \
+          [ "${{ needs.release-forc-wallet.result }}" != "success" ]; then
           echo "Workflow failed. Exiting..."
           exit 1
         else
