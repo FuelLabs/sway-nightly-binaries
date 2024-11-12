@@ -1,4 +1,4 @@
-name: Forc Explorer Release (nightly) 
+name: Forc Explorer Release (nightly)
 
 on:
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
         run: |
           echo "::set-output name=commit_hash::$(git rev-parse --short=10 HEAD)"
 
-      - name: Set tag 
+      - name: Set tag
         id: set-tag
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0)
@@ -86,9 +86,8 @@ jobs:
       - uses: Swatinem/rust-cache@v1
         with:
           cache-on-failure: true
-          key: "${{ matrix.job.target }}"
+          key: '${{ matrix.job.target }}'
 
-            
       - name: Install cargo-edit
         uses: actions-rs/cargo@v1
         with:
@@ -105,7 +104,7 @@ jobs:
         uses: baptiste0928/cargo-install@v1
         with:
           crate: cross
-          cache-key: "${{ matrix.job.target }}"
+          cache-key: '${{ matrix.job.target }}'
 
       - name: Build forc-explore
         run: |
@@ -152,16 +151,3 @@ jobs:
           asset_path: ./${{ env.ZIP_FILE_NAME }}
           asset_name: ${{ env.ZIP_FILE_NAME }}
           asset_content_type: application/gzip
-
-      - name: Notify if Job Fails
-        if: always()
-        uses: ravsamhq/notify-slack-action@v1
-        with:
-          status: ${{ job.status }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          notification_title: "{workflow} has {status_message}"
-          message_format: "{emoji} *{workflow}* {status_message} in <{repo_url}|{repo}> : <{run_url}|View Run Results>"
-          footer: ""
-          notify_when: "failure"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_TOOLING }}
