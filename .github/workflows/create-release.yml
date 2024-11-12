@@ -91,6 +91,7 @@ jobs:
         release-forc-wallet,
       ]
     runs-on: ubuntu-latest
+    if: always()
 
     steps:
       - name: Ensure release-forc succeeded
