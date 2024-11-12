@@ -49,24 +49,23 @@ jobs:
           tag: ${{ steps.set-name.outputs.release_name }}
           allowUpdates: true
           removeArtifacts: true
-          draft: false 
+          draft: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
-        
   release-forc:
     needs: create-release
     uses: ./.github/workflows/nightly-forc-release.yml
     with:
       upload_url: ${{ needs.create-release.outputs.upload_url }}
       date: ${{ needs.create-release.outputs.today }}
-    
+
   release-fuel-core:
     needs: create-release
     uses: ./.github/workflows/nightly-fuel-core-release.yml
     with:
       upload_url: ${{ needs.create-release.outputs.upload_url }}
       date: ${{ needs.create-release.outputs.today }}
-    
+
   release-forc-explorer:
     needs: create-release
     uses: ./.github/workflows/nightly-forc-explorer-release.yml
@@ -83,32 +82,40 @@ jobs:
 
   # Wait for results of called workflows
   monitor-release-status:
-    needs: [ create-release, release-forc, release-fuel-core, release-forc-explorer, release-forc-wallet ]
+    needs:
+      [
+        create-release,
+        release-forc,
+        release-fuel-core,
+        release-forc-explorer,
+        release-forc-wallet,
+      ]
     runs-on: ubuntu-latest
 
     steps:
-    - name: Ensure release-forc succeeded
-      run: |
-        if [ "${{ needs.create-release.result }}" != "success" ] || \
-          [ "${{ needs.release-forc.result }}" != "success" ] || \
-          [ "${{ needs.release-fuel-core.result }}" != "success" ] || \
-          [ "${{ needs.release-forc-explorer.result }}" != "success" ] || \
-          [ "${{ needs.release-forc-wallet.result }}" != "success" ]; then
-          echo "Workflow failed. Exiting..."
-          exit 1
-        else
-          echo "All workflows succeeded."
-          exit 0
-        fi
+      - name: Ensure release-forc succeeded
+        run: |
+          if [ "${{ needs.create-release.result }}" != "success" ] || \
+            [ "${{ needs.release-forc.result }}" != "success" ] || \
+            [ "${{ needs.release-fuel-core.result }}" != "success" ] || \
+            [ "${{ needs.release-forc-explorer.result }}" != "success" ] || \
+            [ "${{ needs.release-forc-wallet.result }}" != "success" ]; then
+            echo "Workflow failed. Exiting..."
+            exit 1
+          else
+            echo "All workflows succeeded."
+            exit 0
+          fi
 
-    - name: Notify if Job Fails
-      uses: ravsamhq/notify-slack-action@v1
-      with:
-        status: ${{ job.status }}
-        token: ${{ secrets.GITHUB_TOKEN }}
-        notification_title: "{workflow} has {status_message}"
-        message_format: "{emoji} *{workflow}* {status_message} in <{repo_url}|{repo}> : <{run_url}|View Run Results>"
-        footer: ""
-        notify_when: "failure"
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_TOOLING }}
+      - name: Notify if Job Fails
+        if: always()
+        uses: ravsamhq/notify-slack-action@v1
+        with:
+          status: ${{ job.status }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          notification_title: '{workflow} has {status_message}'
+          message_format: '{emoji} *{workflow}* {status_message} in <{repo_url}|{repo}> : <{run_url}|View Run Results>'
+          footer: ''
+          notify_when: 'failure'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_TOOLING }}
