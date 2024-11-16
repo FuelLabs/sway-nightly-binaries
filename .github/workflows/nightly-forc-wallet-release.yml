@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   workflow_call:
     inputs:
-      upload_url:
-        required: true
-        type: string
       date:
         required: true
         type: string
@@ -142,11 +139,10 @@ jobs:
           tar -czvf $ZIP_FILE_NAME "$ARTIFACT"
 
       - name: Upload release archive
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          upload_url: ${{ inputs.upload_url }}
-          asset_path: ./${{ env.ZIP_FILE_NAME }}
-          asset_name: ${{ env.ZIP_FILE_NAME }}
-          asset_content_type: application/gzip
+          files:
+            ${{ env.ZIP_FILE_NAME }}
