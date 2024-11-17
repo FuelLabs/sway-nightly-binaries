@@ -56,28 +56,24 @@ jobs:
     needs: create-release
     uses: ./.github/workflows/nightly-forc-release.yml
     with:
-      upload_url: ${{ needs.create-release.outputs.upload_url }}
       date: ${{ needs.create-release.outputs.today }}
 
   release-fuel-core:
     needs: create-release
     uses: ./.github/workflows/nightly-fuel-core-release.yml
     with:
-      upload_url: ${{ needs.create-release.outputs.upload_url }}
       date: ${{ needs.create-release.outputs.today }}
 
   release-forc-explorer:
     needs: create-release
     uses: ./.github/workflows/nightly-forc-explorer-release.yml
     with:
-      upload_url: ${{ needs.create-release.outputs.upload_url }}
       date: ${{ needs.create-release.outputs.today }}
 
   release-forc-wallet:
     needs: create-release
     uses: ./.github/workflows/nightly-forc-wallet-release.yml
     with:
-      upload_url: ${{ needs.create-release.outputs.upload_url }}
       date: ${{ needs.create-release.outputs.today }}
 
   # Wait for results of called workflows

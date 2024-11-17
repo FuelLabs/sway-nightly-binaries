@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   workflow_call:
     inputs:
-      upload_url:
-        required: true
-        type: string
       date:
         required: true
         type: string
@@ -128,17 +125,16 @@ jobs:
           ZIP_FILE_NAME=${{ needs.prepare-release.outputs.zip_name }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
           mkdir -pv ./forc-binaries
-          for BINARY in forc forc-fmt forc-lsp forc-deploy forc-run forc-doc forc-crypto forc-debug forc-tx; do
+          for BINARY in forc forc-fmt forc-lsp forc-deploy forc-run forc-doc forc-crypto forc-debug forc-tx forc-submit; do
             cp "target/${{ matrix.job.target }}/release/$BINARY" ./forc-binaries
           done
           tar -czvf $ZIP_FILE_NAME ./forc-binaries
 
       - name: Archive forc binaries
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          upload_url: ${{ inputs.upload_url }}
-          asset_path: ./${{ env.ZIP_FILE_NAME }}
-          asset_name: ${{ env.ZIP_FILE_NAME }}
-          asset_content_type: application/gzip
+          files:
+            ${{ env.ZIP_FILE_NAME }}
