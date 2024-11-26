@@ -146,3 +146,4 @@ jobs:
         with:
           files:
             ${{ env.ZIP_FILE_NAME }}
+          tag_name: ${{ steps.set-tag.outputs.tag }}
