@@ -7,6 +7,9 @@ on:
       date:
         required: true
         type: string
+      release_name:
+        required: true
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
@@ -165,13 +168,6 @@ jobs:
           cp "target/${{ matrix.job.target }}/release/fuel-core" "$ARTIFACT"
           tar -czvf "$ZIP_FILE_NAME" "$ARTIFACT"
 
-      - name: Reset and enforce tag for master releases
-        if: github.ref == 'refs/heads/master'
-        run: |
-          git tag -d nightly-${{ inputs.date }}
-          git tag nightly-${{ inputs.date }}
-          git push --follow-tags
-
       - name: Upload Binary Artifact
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
@@ -180,3 +176,4 @@ jobs:
         with:
           files:
             ${{ env.ZIP_FILE_NAME }}
+          tag_name: ${{ inputs.release_name }}
