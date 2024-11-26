@@ -41,14 +41,6 @@ jobs:
         with:
           path: scripts
 
-      - name: Enforce tag for master releases
-        if: github.ref == 'refs/heads/master'
-        run: |
-          git push :refs/tags/${{ steps.set-name.outputs.release_name }} || true
-          git tag -d ${{ steps.set-name.outputs.release_name }} || true
-          git tag ${{ steps.set-name.outputs.release_name }}
-          git push --tags
-
       - name: Create Release
         id: create-release
         uses: ncipollo/release-action@v1
