@@ -65,27 +65,28 @@ jobs:
     uses: ./.github/workflows/nightly-forc-release.yml
     with:
       date: ${{ needs.create-release.outputs.today }}
-      release_name: ${{ steps.set-name.outputs.release_name }}
+      release_name: ${{ needs.create-release.outputs.release_name }}
+
   release-fuel-core:
     needs: create-release
     uses: ./.github/workflows/nightly-fuel-core-release.yml
     with:
       date: ${{ needs.create-release.outputs.today }}
-      release_name: ${{ steps.set-name.outputs.release_name }}
+      release_name: ${{ needs.create-release.outputs.release_name }}
 
   release-forc-explorer:
     needs: create-release
     uses: ./.github/workflows/nightly-forc-explorer-release.yml
     with:
       date: ${{ needs.create-release.outputs.today }}
-      release_name: ${{ steps.set-name.outputs.release_name }}
+      release_name: ${{ needs.create-release.outputs.release_name }}
 
   release-forc-wallet:
     needs: create-release
     uses: ./.github/workflows/nightly-forc-wallet-release.yml
     with:
       date: ${{ needs.create-release.outputs.today }}
-      release_name: ${{ steps.set-name.outputs.release_name }}
+      release_name: ${{ needs.create-release.outputs.release_name }}
 
   # Wait for results of called workflows
   monitor-release-status:
