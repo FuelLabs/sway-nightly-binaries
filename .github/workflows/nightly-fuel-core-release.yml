@@ -85,31 +85,13 @@ jobs:
         with:
           repository: fuellabs/fuel-core
 
-      - name: Set up Docker Buildx
-        if: matrix.job.cross_image
-        uses: docker/setup-buildx-action@v1
-
-      - name: Setup custom cross env ${{ matrix.job.cross_image }}
-        if: matrix.job.cross_image
-        uses: docker/build-push-action@v2
+      - name: Setup cross build environment
+        uses: ./.github/workflows/setup-cross-build.yml
         with:
-          context: ci
-          file: ci/Dockerfile.${{ matrix.job.target }}-clang
-          tags: ${{ matrix.job.cross_image }}:latest
-          load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Install packages (macOS)
-        if: matrix.job.os == 'macos-latest'
-        run: |
-          ci/macos-install-packages.sh
-
-      - name: Install toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          targets: ${{ matrix.job.target }},"wasm32-unknown-unknown"
+          target: ${{ matrix.job.target }}
+          cross_image: ${{ matrix.job.cross_image }}
+          os: ${{ matrix.job.os }}
+          rust_version: ${{ env.RUST_VERSION }}
 
       - name: Install cargo-edit
         uses: actions-rs/cargo@v1
