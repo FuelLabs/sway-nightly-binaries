@@ -86,7 +86,7 @@ jobs:
           repository: fuellabs/fuel-core
 
       - name: Setup cross build environment
-        uses: ./.github/workflows/setup-cross-build.yml
+        uses: ./.github/actions/setup-cross-build
         with:
           target: ${{ matrix.job.target }}
           cross_image: ${{ matrix.job.cross_image }}
