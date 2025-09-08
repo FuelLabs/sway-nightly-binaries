@@ -1,0 +1,67 @@
+name: Setup Cross Build Environment
+description: Prepare cross-compile environment (Docker image, macOS deps, Rust toolchain)
+
+inputs:
+  target:
+    description: Rust target triple to build for
+    required: true
+  cross_image:
+    description: Local Docker image tag to build and load (optional)
+    required: false
+    default: ""
+  os:
+    description: Runner OS (unused, kept for compatibility)
+    required: false
+    default: ""
+  rust_version:
+    description: Rust toolchain to install
+    required: false
+    default: "stable"
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout fuel-core for Docker files
+      if: ${{ inputs.cross_image != '' }}
+      uses: actions/checkout@v3
+      with:
+        repository: fuellabs/fuel-core
+        path: fuel-core-ci
+
+    - name: Set up Docker Buildx
+      if: ${{ inputs.cross_image != '' }}
+      uses: docker/setup-buildx-action@v1
+
+    - name: Setup custom cross env ${{ inputs.cross_image }}
+      if: ${{ inputs.cross_image != '' }}
+      uses: docker/build-push-action@v2
+      with:
+        context: fuel-core-ci/ci
+        file: fuel-core-ci/ci/Dockerfile.${{ inputs.target }}-clang
+        tags: ${{ inputs.cross_image }}:latest
+        load: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Checkout fuel-core for macOS scripts
+      if: ${{ runner.os == 'macOS' }}
+      uses: actions/checkout@v3
+      with:
+        repository: fuellabs/fuel-core
+        path: fuel-core-ci
+
+    - name: Install packages (macOS)
+      if: ${{ runner.os == 'macOS' }}
+      shell: bash
+      run: |
+        if [ -f "fuel-core-ci/ci/macos-install-packages.sh" ]; then
+          fuel-core-ci/ci/macos-install-packages.sh
+        else
+          brew install llvm
+        fi
+
+    - name: Install toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ inputs.rust_version }}
+        targets: ${{ inputs.target }},wasm32-unknown-unknown
