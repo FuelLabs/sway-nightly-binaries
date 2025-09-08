@@ -110,7 +110,7 @@ jobs:
         run: |
           cargo set-version --metadata "nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}"
 
-      - name: Use Cross
+      - name: Install cross
         uses: baptiste0928/cargo-install@v1
         with:
           crate: cross
