@@ -43,6 +43,20 @@ runs:
         cache-from: type=gha,scope=cross-${{ inputs.target }}
         cache-to: type=gha,mode=max,scope=cross-${{ inputs.target }}
 
+    - name: Configure Cross.toml for custom image and extra deps
+      if: ${{ inputs.cross_image != '' }}
+      shell: bash
+      run: |
+        cat > Cross.toml <<'EOF'
+        [target.${{ inputs.target }}]
+        image = "${{ inputs.cross_image }}:latest"
+        pre-build = [
+          "apt-get update",
+          "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential pkg-config cmake libssl-dev zlib1g-dev"
+        ]
+        EOF
+        echo "CROSS_CONFIG=$PWD/Cross.toml" >> "$GITHUB_ENV"
+
     - name: Checkout fuel-core for macOS scripts
       if: ${{ runner.os == 'macOS' }}
       uses: actions/checkout@v3
@@ -59,6 +73,14 @@ runs:
         else
           brew install llvm
         fi
+
+    - name: Install packages (Linux native)
+      if: ${{ runner.os == 'Linux' && inputs.cross_image == '' }}
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+          build-essential clang libclang-dev pkg-config cmake libssl-dev zlib1g-dev
 
     - name: Install toolchain
       uses: dtolnay/rust-toolchain@master
