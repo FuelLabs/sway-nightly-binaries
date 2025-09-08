@@ -30,7 +30,7 @@ runs:
 
     - name: Set up Docker Buildx
       if: ${{ inputs.cross_image != '' }}
-      uses: docker/setup-buildx-action@v1
+      uses: docker/setup-buildx-action@v3
 
     - name: Setup custom cross env ${{ inputs.cross_image }}
       if: ${{ inputs.cross_image != '' }}
