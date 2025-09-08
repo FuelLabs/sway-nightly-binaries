@@ -80,10 +80,14 @@ jobs:
             arch: arm64
             svm_target_platform: macosx-aarch64
     steps:
-      - name: Checkout sources
+      - name: Checkout this repo (action path)
+        uses: actions/checkout@v3
+
+      - name: Checkout sway
         uses: actions/checkout@v3
         with:
           repository: fuellabs/sway
+          path: sway
 
       - name: Setup cross build environment
         uses: ./.github/actions/setup-cross-build
@@ -98,16 +102,13 @@ jobs:
           key: '${{ matrix.job.target }}'
 
       - name: Install cargo-edit
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: cargo-edit
+        working-directory: sway
+        run: cargo install cargo-edit
 
       - name: Bump patch version and add nightly pre-release tag
-        uses: actions-rs/cargo@v1
-        with:
-          command: set-version
-          args: --metadata nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}
+        working-directory: sway
+        run: |
+          cargo set-version --metadata "nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}"
 
       - name: Use Cross
         uses: baptiste0928/cargo-install@v1
@@ -116,6 +117,7 @@ jobs:
           cache-key: '${{ matrix.job.target }}'
 
       - name: Build forc binaries
+        working-directory: sway
         run: |
           cross build --profile=release --locked --target ${{ matrix.job.target }} --bins
 
@@ -125,6 +127,7 @@ jobs:
           PLATFORM_NAME: ${{ matrix.job.platform }}
           TARGET: ${{ matrix.job.target }}
           ARCH: ${{ matrix.job.arch }}
+        working-directory: sway
         run: |
           ZIP_FILE_NAME=${{ needs.prepare-release.outputs.zip_name }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
