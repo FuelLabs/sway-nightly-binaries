@@ -34,7 +34,7 @@ runs:
 
     - name: Setup custom cross env ${{ inputs.cross_image }}
       if: ${{ inputs.cross_image != '' }}
-      uses: docker/build-push-action@v2
+      uses: docker/build-push-action@v6
       with:
         context: fuel-core-ci/ci
         file: fuel-core-ci/ci/Dockerfile.${{ inputs.target }}-clang
