@@ -21,9 +21,9 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout fuel-core for Docker files
-      if: ${{ inputs.cross_image != '' }}
-      uses: actions/checkout@v3
+    - name: Checkout fuel-core sources
+      if: ${{ inputs.cross_image != '' || runner.os == 'macOS' }}
+      uses: actions/checkout@v4
       with:
         repository: fuellabs/fuel-core
         path: fuel-core-ci
