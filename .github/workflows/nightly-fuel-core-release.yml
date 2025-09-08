@@ -83,11 +83,11 @@ jobs:
       - name: Checkout this repo (action path)
         uses: actions/checkout@v3
 
-      - name: Checkout repository
+      - name: Checkout fuel-core
         uses: actions/checkout@v3
         with:
           repository: fuellabs/fuel-core
-          path: sources
+          path: fuel-core
 
       - name: Setup cross build environment
         uses: ./.github/actions/setup-cross-build
@@ -98,11 +98,11 @@ jobs:
           rust_version: ${{ env.RUST_VERSION }}
 
       - name: Install cargo-edit
-        working-directory: sources
+        working-directory: fuel-core
         run: cargo install cargo-edit
 
       - name: Bump patch version and add nightly pre-release tag
-        working-directory: sources
+        working-directory: fuel-core
         run: |
           cargo set-version --metadata "nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}"
 
@@ -118,18 +118,18 @@ jobs:
           cache-key: '${{ matrix.job.target }}'
 
       - name: Build fuel-core
-        working-directory: sources
+        working-directory: fuel-core
         run: |
           cross build --profile=release --target ${{ matrix.job.target }} --features "production" -p fuel-core-bin
 
       - name: Strip release binary linux x86_64
         if: matrix.job.platform == 'linux'
-        working-directory: sources
+        working-directory: fuel-core
         run: strip "target/${{ matrix.job.target }}/release/fuel-core"
 
       - name: Strip release binary aarch64-linux-gnu
         if: matrix.job.target == 'aarch64-unknown-linux-gnu'
-        working-directory: sources
+        working-directory: fuel-core
         run: |
           docker run --rm -v \
           "$PWD/target:/target:Z" \
@@ -139,14 +139,14 @@ jobs:
 
       - name: Strip release binary mac
         if: matrix.job.os == 'macos-latest'
-        working-directory: sources
+        working-directory: fuel-core
         run: strip -x "target/${{ matrix.job.target }}/release/fuel-core"
 
       - name: Prepare Binary Artifact
         env:
           PLATFORM_NAME: ${{ matrix.job.platform }}
           TARGET: ${{ matrix.job.target }}
-        working-directory: sources
+        working-directory: fuel-core
         run: |
           ARTIFACT="${{ needs.prepare-release.outputs.zip_name }}-${{ env.TARGET }}"
           ZIP_FILE_NAME="$ARTIFACT.tar.gz"
