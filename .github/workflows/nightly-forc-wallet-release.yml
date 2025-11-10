@@ -10,6 +10,9 @@ on:
       release_name:
         required: true
         type: string
+    secrets:
+      SLACK_WEBHOOK_TOOLING:
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -150,3 +153,16 @@ jobs:
           files:
             ${{ env.ZIP_FILE_NAME }}
           tag_name: ${{ inputs.release_name }}
+
+      - name: Notify if matrix leg failed
+        if: always() && failure()
+        uses: ravsamhq/notify-slack-action@v1
+        with:
+          status: failure
+          token: ${{ secrets.GITHUB_TOKEN }}
+          notification_title: '{workflow} matrix leg failed'
+          message_format: '{emoji} *{workflow}* failed for target `${{ matrix.job.target }}` in <{repo_url}|{repo}> : <{run_url}|View Run Results>'
+          footer: ''
+          notify_when: 'failure'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_TOOLING }}
