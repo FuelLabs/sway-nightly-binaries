@@ -147,7 +147,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           files:
-            ${{ env.ZIP_FILE_NAME }}
+            sway/${{ env.ZIP_FILE_NAME }}
           tag_name: ${{ inputs.release_name }}
 
       - name: Notify if matrix leg failed
