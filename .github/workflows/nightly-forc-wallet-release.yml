@@ -39,7 +39,7 @@ jobs:
       - name: Set commit hash
         id: set-commit-hash
         run: |
-          echo "commit_hash=$(git rev-parse --short=10 HEAD)" >> "$GITHUB_OUTPUT"
+          echo "::set-output name=commit_hash::$(git rev-parse --short=10 HEAD)"
 
       - name: Set tag
         id: set-tag
@@ -48,13 +48,13 @@ jobs:
           LATEST_TAG=$(git describe --tags --abbrev=0 --match 'forc-wallet-*')
           # Extract version from tag (forc-wallet-X.Y.Z -> X.Y.Z)
           VERSION="${LATEST_TAG#forc-wallet-}"
-          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "::set-output name=tag::$VERSION"
 
       - name: Set name
         id: set-name
         run: |
           NAME=forc-wallet-${{ steps.set-tag.outputs.tag }}+nightly.${{ inputs.date }}.${{ steps.set-commit-hash.outputs.commit_hash }}
-          echo "zip_name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "::set-output name=zip_name::$NAME"
 
   build-release:
     name: Release forc-wallet binaries
@@ -82,10 +82,12 @@ jobs:
           repository: FuelLabs/forc
 
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: stable
-          targets: ${{ matrix.job.target }}
+          target: ${{ matrix.job.target }}
+          override: true
 
       - uses: Swatinem/rust-cache@v1
         with:
@@ -93,11 +95,16 @@ jobs:
           key: '${{ matrix.job.target }}'
 
       - name: Install cargo-edit
-        run: cargo install cargo-edit
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-edit
 
       - name: Bump patch version and add nightly pre-release tag
-        run: |
-          cargo set-version --package forc-wallet --metadata "nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}"
+        uses: actions-rs/cargo@v1
+        with:
+          command: set-version
+          args: --package forc-wallet --metadata nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}
 
       - name: Install cross
         uses: baptiste0928/cargo-install@v1
