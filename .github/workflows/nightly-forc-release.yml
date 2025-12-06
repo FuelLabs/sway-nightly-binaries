@@ -106,7 +106,7 @@ jobs:
 
       - name: Install cargo-edit
         working-directory: sway
-        run: cargo install cargo-edit
+        run: cargo install cargo-edit --locked
 
       - name: Bump patch version and add nightly pre-release tag
         working-directory: sway
