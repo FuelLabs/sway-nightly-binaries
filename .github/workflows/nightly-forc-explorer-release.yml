@@ -95,7 +95,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: cargo-edit
+          args: cargo-edit --locked
 
       - name: Bump patch version and add nightly pre-release tag
         uses: actions-rs/cargo@v1
