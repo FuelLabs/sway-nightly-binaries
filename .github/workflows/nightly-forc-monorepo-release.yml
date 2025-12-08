@@ -1,4 +1,4 @@
-name: Forc Explorer Release (nightly)
+name: Forc Monorepo Release (nightly)
 
 on:
   workflow_dispatch:
@@ -17,44 +17,50 @@ on:
 env:
   CARGO_TERM_COLOR: always
   REGISTRY: ghcr.io
+  # Define workspace binaries here - everything else is derived from this list
+  BINARIES: "forc-wallet forc-crypto"
 
 jobs:
   prepare-release:
     runs-on: ubuntu-latest
     name: Prepare release
     outputs:
-      tag: ${{ steps.set-tag.outputs.tag }}
-      zip_name: ${{ steps.set-name.outputs.zip_name }}
       commit_hash: ${{ steps.set-commit-hash.outputs.commit_hash }}
-
+      versions_json: ${{ steps.set-versions.outputs.versions_json }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
         with:
-          repository: FuelLabs/forc-explorer
+          repository: FuelLabs/forc
           fetch-depth: 0
 
       - name: Set commit hash
         id: set-commit-hash
         run: |
-          echo "::set-output name=commit_hash::$(git rev-parse --short=10 HEAD)"
+          echo "commit_hash=$(git rev-parse --short=10 HEAD)" >> $GITHUB_OUTPUT
 
-      - name: Set tag
-        id: set-tag
+      - name: Set versions from tags
+        id: set-versions
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0)
-          # trim v
-          LATEST_TAG="${LATEST_TAG#v}"
-          echo "::set-output name=tag::$LATEST_TAG"
-
-      - name: Set name
-        id: set-name
-        run: |
-          NAME=forc-explore-${{ steps.set-tag.outputs.tag }}+nightly.${{ inputs.date }}.${{ steps.set-commit-hash.outputs.commit_hash }}
-          echo "::set-output name=zip_name::$NAME"
+          # Build a JSON object mapping binary name to version
+          VERSIONS_JSON="{"
+          FIRST=true
+          for BINARY in ${{ env.BINARIES }}; do
+            TAG=$(git describe --tags --abbrev=0 --match "${BINARY}-*")
+            VERSION="${TAG#${BINARY}-}"
+            echo "${BINARY} version: $VERSION"
+            if [ "$FIRST" = true ]; then
+              FIRST=false
+            else
+              VERSIONS_JSON+=","
+            fi
+            VERSIONS_JSON+="\"${BINARY}\":\"${VERSION}\""
+          done
+          VERSIONS_JSON+="}"
+          echo "versions_json=$VERSIONS_JSON" >> $GITHUB_OUTPUT
 
   build-release:
-    name: Release forc-explore binaries
+    name: Release forc monorepo binaries
     runs-on: ${{ matrix.job.os }}
     needs: prepare-release
     strategy:
@@ -76,7 +82,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v3
         with:
-          repository: fuellabs/forc-explorer
+          repository: FuelLabs/forc
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -97,62 +103,77 @@ jobs:
           command: install
           args: cargo-edit --locked
 
-      - name: Bump patch version and add nightly pre-release tag
-        uses: actions-rs/cargo@v1
-        with:
-          command: set-version
-          args: --metadata nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}
+      - name: Bump versions and add nightly pre-release tags
+        run: |
+          for BINARY in ${{ env.BINARIES }}; do
+            cargo set-version --package "$BINARY" --metadata nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}
+          done
 
-      - name: Use Cross
+      - name: Install cross
         uses: baptiste0928/cargo-install@v1
         with:
           crate: cross
           cache-key: '${{ matrix.job.target }}'
 
-      - name: Build forc-explore
+      - name: Build forc monorepo binaries
         run: |
-          cross build --profile=release --target ${{ matrix.job.target }} -p forc-explore
+          PACKAGES=""
+          for BINARY in ${{ env.BINARIES }}; do
+            PACKAGES+=" -p $BINARY"
+          done
+          cross build --profile=release --target ${{ matrix.job.target }} $PACKAGES
 
       - name: Strip release binary x86_64-linux-gnu
         if: matrix.job.target == 'x86_64-unknown-linux-gnu'
         run: |
-          strip "target/${{ matrix.job.target }}/release/forc-explore"
+          for BINARY in ${{ env.BINARIES }}; do
+            strip "target/${{ matrix.job.target }}/release/$BINARY"
+          done
 
       - name: Strip release binary aarch64-linux-gnu
         if: matrix.job.target == 'aarch64-unknown-linux-gnu'
         run: |
+          STRIP_ARGS=""
+          for BINARY in ${{ env.BINARIES }}; do
+            STRIP_ARGS+=" /target/aarch64-unknown-linux-gnu/release/$BINARY"
+          done
           docker run --rm -v \
           "$PWD/target:/target:Z" \
           ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main \
-          aarch64-linux-gnu-strip \
-          /target/aarch64-unknown-linux-gnu/release/forc-explore
+          aarch64-linux-gnu-strip $STRIP_ARGS
 
       - name: Strip release binary mac
         if: matrix.job.os == 'macos-latest'
         run: |
-          strip -x "target/${{ matrix.job.target }}/release/forc-explore"
+          for BINARY in ${{ env.BINARIES }}; do
+            strip -x "target/${{ matrix.job.target }}/release/$BINARY"
+          done
 
-      - name: Prep Assets
-        id: prep_assets
+      - name: Prep and upload assets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VERSIONS_JSON: ${{ needs.prepare-release.outputs.versions_json }}
         run: |
-          ARTIFACT="${{ needs.prepare-release.outputs.zip_name }}-${{ matrix.job.target }}"
-          ZIP_FILE_NAME="$ARTIFACT.tar.gz"
-          echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
-          # create zip file
-          mkdir -pv "$ARTIFACT"
+          # Build newline-separated list for softprops/action-gh-release
+          echo 'ALL_ARCHIVES<<EOF' >> $GITHUB_ENV
+          for BINARY in ${{ env.BINARIES }}; do
+            VERSION=$(echo "$VERSIONS_JSON" | jq -r ".\"$BINARY\"")
+            ARTIFACT="${BINARY}-${VERSION}+nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}-${{ matrix.job.target }}"
+            ZIP_FILE_NAME="$ARTIFACT.tar.gz"
+            mkdir -pv "$ARTIFACT"
+            cp "target/${{ matrix.job.target }}/release/$BINARY" "$ARTIFACT"
+            tar -czvf "$ZIP_FILE_NAME" "$ARTIFACT"
+            echo "$ZIP_FILE_NAME" >> $GITHUB_ENV
+          done
+          echo 'EOF' >> $GITHUB_ENV
 
-          cp "target/${{ matrix.job.target }}/release/forc-explore" "$ARTIFACT"
-
-          tar -czvf $ZIP_FILE_NAME "$ARTIFACT"
-
-      - name: Upload release archive
+      - name: Upload release archives
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          files:
-            ${{ env.ZIP_FILE_NAME }}
+          files: ${{ env.ALL_ARCHIVES }}
           tag_name: ${{ inputs.release_name }}
 
       - name: Notify if matrix leg failed

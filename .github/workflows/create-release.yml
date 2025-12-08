@@ -70,18 +70,9 @@ jobs:
       date: ${{ needs.create-release.outputs.today }}
       release_name: ${{ needs.create-release.outputs.release_name }}
 
-  release-forc-explorer:
+  release-forc-monorepo:
     needs: create-release
-    uses: ./.github/workflows/nightly-forc-explorer-release.yml
-    secrets:
-      SLACK_WEBHOOK_TOOLING: ${{ secrets.SLACK_WEBHOOK_TOOLING }}
-    with:
-      date: ${{ needs.create-release.outputs.today }}
-      release_name: ${{ needs.create-release.outputs.release_name }}
-
-  release-forc-wallet:
-    needs: create-release
-    uses: ./.github/workflows/nightly-forc-wallet-release.yml
+    uses: ./.github/workflows/nightly-forc-monorepo-release.yml
     secrets:
       SLACK_WEBHOOK_TOOLING: ${{ secrets.SLACK_WEBHOOK_TOOLING }}
     with:
@@ -95,20 +86,18 @@ jobs:
         create-release,
         release-forc,
         release-fuel-core,
-        release-forc-explorer,
-        release-forc-wallet,
+        release-forc-monorepo,
       ]
     runs-on: ubuntu-latest
     if: always()
 
     steps:
-      - name: Ensure release-forc succeeded
+      - name: Ensure all releases succeeded
         run: |
           if [ "${{ needs.create-release.result }}" != "success" ] || \
             [ "${{ needs.release-forc.result }}" != "success" ] || \
             [ "${{ needs.release-fuel-core.result }}" != "success" ] || \
-            [ "${{ needs.release-forc-explorer.result }}" != "success" ] || \
-            [ "${{ needs.release-forc-wallet.result }}" != "success" ]; then
+            [ "${{ needs.release-forc-monorepo.result }}" != "success" ]; then
             echo "Workflow failed. Exiting..."
             exit 1
           else
