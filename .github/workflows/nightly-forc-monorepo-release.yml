@@ -154,7 +154,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           VERSIONS_JSON: ${{ needs.prepare-release.outputs.versions_json }}
         run: |
-          ALL_ARCHIVES=""
+          # Build newline-separated list for softprops/action-gh-release
+          echo 'ALL_ARCHIVES<<EOF' >> $GITHUB_ENV
           for BINARY in ${{ env.BINARIES }}; do
             VERSION=$(echo "$VERSIONS_JSON" | jq -r ".\"$BINARY\"")
             ARTIFACT="${BINARY}-${VERSION}+nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}-${{ matrix.job.target }}"
@@ -162,9 +163,9 @@ jobs:
             mkdir -pv "$ARTIFACT"
             cp "target/${{ matrix.job.target }}/release/$BINARY" "$ARTIFACT"
             tar -czvf "$ZIP_FILE_NAME" "$ARTIFACT"
-            ALL_ARCHIVES+=" $ZIP_FILE_NAME"
+            echo "$ZIP_FILE_NAME" >> $GITHUB_ENV
           done
-          echo "ALL_ARCHIVES=$ALL_ARCHIVES" >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
 
       - name: Upload release archives
         uses: softprops/action-gh-release@v2

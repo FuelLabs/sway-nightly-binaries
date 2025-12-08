@@ -70,15 +70,6 @@ jobs:
       date: ${{ needs.create-release.outputs.today }}
       release_name: ${{ needs.create-release.outputs.release_name }}
 
-  release-forc-explorer:
-    needs: create-release
-    uses: ./.github/workflows/nightly-forc-explorer-release.yml
-    secrets:
-      SLACK_WEBHOOK_TOOLING: ${{ secrets.SLACK_WEBHOOK_TOOLING }}
-    with:
-      date: ${{ needs.create-release.outputs.today }}
-      release_name: ${{ needs.create-release.outputs.release_name }}
-
   release-forc-monorepo:
     needs: create-release
     uses: ./.github/workflows/nightly-forc-monorepo-release.yml
@@ -95,7 +86,6 @@ jobs:
         create-release,
         release-forc,
         release-fuel-core,
-        release-forc-explorer,
         release-forc-monorepo,
       ]
     runs-on: ubuntu-latest
@@ -107,7 +97,6 @@ jobs:
           if [ "${{ needs.create-release.result }}" != "success" ] || \
             [ "${{ needs.release-forc.result }}" != "success" ] || \
             [ "${{ needs.release-fuel-core.result }}" != "success" ] || \
-            [ "${{ needs.release-forc-explorer.result }}" != "success" ] || \
             [ "${{ needs.release-forc-monorepo.result }}" != "success" ]; then
             echo "Workflow failed. Exiting..."
             exit 1
