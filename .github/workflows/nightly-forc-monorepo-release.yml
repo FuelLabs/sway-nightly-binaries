@@ -69,15 +69,19 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             target: x86_64-unknown-linux-gnu
+            simple_target: linux_amd64
           - os: ubuntu-latest
             platform: linux
             target: aarch64-unknown-linux-gnu
+            simple_target: linux_arm64
           - os: macos-latest
             platform: darwin
             target: x86_64-apple-darwin
+            simple_target: darwin_amd64
           - os: macos-latest
             platform: darwin
             target: aarch64-apple-darwin
+            simple_target: darwin_arm64
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -154,11 +158,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           VERSIONS_JSON: ${{ needs.prepare-release.outputs.versions_json }}
         run: |
-          # Build newline-separated list for softprops/action-gh-release
           echo 'ALL_ARCHIVES<<EOF' >> $GITHUB_ENV
           for BINARY in ${{ env.BINARIES }}; do
             VERSION=$(echo "$VERSIONS_JSON" | jq -r ".\"$BINARY\"")
-            ARTIFACT="${BINARY}-${VERSION}+nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}-${{ matrix.job.target }}"
+            ARTIFACT="${BINARY}-${VERSION}+nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}-${{ matrix.job.simple_target }}"
             ZIP_FILE_NAME="$ARTIFACT.tar.gz"
             mkdir -pv "$ARTIFACT"
             cp "target/${{ matrix.job.target }}/release/$BINARY" "$ARTIFACT"
