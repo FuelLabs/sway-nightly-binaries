@@ -135,7 +135,7 @@ jobs:
           ZIP_FILE_NAME=${{ needs.prepare-release.outputs.zip_name }}-${{ env.PLATFORM_NAME }}_${{ env.ARCH }}.tar.gz
           echo "ZIP_FILE_NAME=$ZIP_FILE_NAME" >> $GITHUB_ENV
           mkdir -pv ./forc-binaries
-          for BINARY in forc forc-fmt forc-lsp forc-call forc-deploy forc-run forc-doc forc-debug forc-tx forc-submit forc-migrate forc-node forc-publish; do
+          for BINARY in forc forc-fmt forc-lsp forc-call forc-deploy forc-run forc-doc forc-debug forc-tx forc-submit forc-migrate forc-publish; do
             cp "target/${{ matrix.job.target }}/release/$BINARY" ./forc-binaries
           done
           tar -czvf $ZIP_FILE_NAME ./forc-binaries
