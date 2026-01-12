@@ -18,7 +18,7 @@ env:
   CARGO_TERM_COLOR: always
   REGISTRY: ghcr.io
   # Define workspace binaries here - everything else is derived from this list
-  BINARIES: "forc-wallet forc-crypto"
+  BINARIES: "forc-wallet forc-crypto forc-node"
 
 jobs:
   prepare-release:
@@ -70,10 +70,12 @@ jobs:
             platform: linux
             target: x86_64-unknown-linux-gnu
             simple_target: linux_amd64
+            cross_image: x86_64-linux-gnu
           - os: ubuntu-latest
             platform: linux
             target: aarch64-unknown-linux-gnu
             simple_target: linux_arm64
+            cross_image: aarch64-linux-gnu
           - os: macos-latest
             platform: darwin
             target: x86_64-apple-darwin
@@ -83,18 +85,21 @@ jobs:
             target: aarch64-apple-darwin
             simple_target: darwin_arm64
     steps:
-      - name: Checkout sources
+      - name: Checkout this repo (action path)
+        uses: actions/checkout@v3
+
+      - name: Checkout forc
         uses: actions/checkout@v3
         with:
           repository: FuelLabs/forc
+          path: forc
 
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Setup cross build environment
+        uses: ./.github/actions/setup-cross-build
         with:
-          profile: minimal
-          toolchain: stable
           target: ${{ matrix.job.target }}
-          override: true
+          cross_image: ${{ matrix.job.cross_image }}
+          os: ${{ matrix.job.os }}
 
       - uses: Swatinem/rust-cache@v1
         with:
@@ -102,12 +107,11 @@ jobs:
           key: '${{ matrix.job.target }}'
 
       - name: Install cargo-edit
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: cargo-edit --locked
+        working-directory: forc
+        run: cargo install cargo-edit --locked
 
       - name: Bump versions and add nightly pre-release tags
+        working-directory: forc
         run: |
           for BINARY in ${{ env.BINARIES }}; do
             cargo set-version --package "$BINARY" --metadata nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}
@@ -120,6 +124,7 @@ jobs:
           cache-key: '${{ matrix.job.target }}'
 
       - name: Build forc monorepo binaries
+        working-directory: forc
         run: |
           PACKAGES=""
           for BINARY in ${{ env.BINARIES }}; do
@@ -129,6 +134,7 @@ jobs:
 
       - name: Strip release binary x86_64-linux-gnu
         if: matrix.job.target == 'x86_64-unknown-linux-gnu'
+        working-directory: forc
         run: |
           for BINARY in ${{ env.BINARIES }}; do
             strip "target/${{ matrix.job.target }}/release/$BINARY"
@@ -136,6 +142,7 @@ jobs:
 
       - name: Strip release binary aarch64-linux-gnu
         if: matrix.job.target == 'aarch64-unknown-linux-gnu'
+        working-directory: forc
         run: |
           STRIP_ARGS=""
           for BINARY in ${{ env.BINARIES }}; do
@@ -143,17 +150,19 @@ jobs:
           done
           docker run --rm -v \
           "$PWD/target:/target:Z" \
-          ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main \
+          aarch64-linux-gnu:latest \
           aarch64-linux-gnu-strip $STRIP_ARGS
 
       - name: Strip release binary mac
         if: matrix.job.os == 'macos-latest'
+        working-directory: forc
         run: |
           for BINARY in ${{ env.BINARIES }}; do
             strip -x "target/${{ matrix.job.target }}/release/$BINARY"
           done
 
       - name: Prep and upload assets
+        working-directory: forc
         env:
           GITHUB_TOKEN: ${{ github.token }}
           VERSIONS_JSON: ${{ needs.prepare-release.outputs.versions_json }}
@@ -166,7 +175,7 @@ jobs:
             mkdir -pv "$ARTIFACT"
             cp "target/${{ matrix.job.target }}/release/$BINARY" "$ARTIFACT"
             tar -czvf "$ZIP_FILE_NAME" "$ARTIFACT"
-            echo "$ZIP_FILE_NAME" >> $GITHUB_ENV
+            echo "forc/$ZIP_FILE_NAME" >> $GITHUB_ENV
           done
           echo 'EOF' >> $GITHUB_ENV
 
