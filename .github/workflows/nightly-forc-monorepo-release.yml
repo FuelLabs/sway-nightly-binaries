@@ -17,6 +17,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   REGISTRY: ghcr.io
+  RUST_VERSION: 1.90.0
   # Define workspace binaries here - everything else is derived from this list
   BINARIES: "forc-wallet forc-crypto forc-node"
 
@@ -100,6 +101,7 @@ jobs:
           target: ${{ matrix.job.target }}
           cross_image: ${{ matrix.job.cross_image }}
           os: ${{ matrix.job.os }}
+          rust_version: ${{ env.RUST_VERSION }}
 
       - uses: Swatinem/rust-cache@v1
         with:
