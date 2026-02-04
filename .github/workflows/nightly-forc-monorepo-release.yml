@@ -18,8 +18,9 @@ env:
   CARGO_TERM_COLOR: always
   REGISTRY: ghcr.io
   RUST_VERSION: 1.90.0
-  # Define workspace binaries here - everything else is derived from this list
-  BINARIES: "forc-wallet forc-crypto forc-node"
+  # Define workspace crates here - everything else is derived from this list
+  # Note: Some crates (e.g., forc-client) produce multiple binaries via [[bin]] sections
+  CRATES: "forc-wallet forc-crypto forc-node forc-client"
 
 jobs:
   prepare-release:
@@ -43,19 +44,19 @@ jobs:
       - name: Set versions from tags
         id: set-versions
         run: |
-          # Build a JSON object mapping binary name to version
+          # Build a JSON object mapping crate name to version
           VERSIONS_JSON="{"
           FIRST=true
-          for BINARY in ${{ env.BINARIES }}; do
-            TAG=$(git describe --tags --abbrev=0 --match "${BINARY}-*")
-            VERSION="${TAG#${BINARY}-}"
-            echo "${BINARY} version: $VERSION"
+          for CRATE in ${{ env.CRATES }}; do
+            TAG=$(git describe --tags --abbrev=0 --match "${CRATE}-*")
+            VERSION="${TAG#${CRATE}-}"
+            echo "${CRATE} version: $VERSION"
             if [ "$FIRST" = true ]; then
               FIRST=false
             else
               VERSIONS_JSON+=","
             fi
-            VERSIONS_JSON+="\"${BINARY}\":\"${VERSION}\""
+            VERSIONS_JSON+="\"${CRATE}\":\"${VERSION}\""
           done
           VERSIONS_JSON+="}"
           echo "versions_json=$VERSIONS_JSON" >> $GITHUB_OUTPUT
@@ -95,6 +96,30 @@ jobs:
           repository: FuelLabs/forc
           path: forc
 
+      - name: Build binary map
+        working-directory: forc
+        run: |
+          # Build JSON mapping crate -> space-separated binary names
+          # Extracts from [[bin]] sections, falls back to crate name
+          BINARY_MAP="{"
+          FIRST=true
+          for CRATE in ${{ env.CRATES }}; do
+            if [ "$FIRST" = true ]; then FIRST=false; else BINARY_MAP+=","; fi
+            if grep -q '^\[\[bin\]\]' "$CRATE/Cargo.toml" 2>/dev/null; then
+              BINS=$(grep -A3 '^\[\[bin\]\]' "$CRATE/Cargo.toml" | grep '^name' | sed 's/.*= *"\([^"]*\)".*/\1/' | xargs)
+              if [ -z "$BINS" ]; then
+                echo "ERROR: $CRATE has [[bin]] sections but failed to extract binary names"
+                exit 1
+              fi
+            else
+              BINS="$CRATE"
+            fi
+            BINARY_MAP+="\"$CRATE\":\"$BINS\""
+          done
+          BINARY_MAP+="}"
+          echo "BINARY_MAP=$BINARY_MAP" >> $GITHUB_ENV
+          echo "Binary map: $BINARY_MAP"
+
       - name: Setup cross build environment
         uses: ./.github/actions/setup-cross-build
         with:
@@ -115,8 +140,8 @@ jobs:
       - name: Bump versions and add nightly pre-release tags
         working-directory: forc
         run: |
-          for BINARY in ${{ env.BINARIES }}; do
-            cargo set-version --package "$BINARY" --metadata nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}
+          for CRATE in ${{ env.CRATES }}; do
+            cargo set-version --package "$CRATE" --metadata nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}
           done
 
       - name: Install cross
@@ -129,8 +154,8 @@ jobs:
         working-directory: forc
         run: |
           PACKAGES=""
-          for BINARY in ${{ env.BINARIES }}; do
-            PACKAGES+=" -p $BINARY"
+          for CRATE in ${{ env.CRATES }}; do
+            PACKAGES+=" -p $CRATE"
           done
           cross build --profile=release --target ${{ matrix.job.target }} $PACKAGES
 
@@ -138,8 +163,10 @@ jobs:
         if: matrix.job.target == 'x86_64-unknown-linux-gnu'
         working-directory: forc
         run: |
-          for BINARY in ${{ env.BINARIES }}; do
-            strip "target/${{ matrix.job.target }}/release/$BINARY"
+          for CRATE in ${{ env.CRATES }}; do
+            for BIN in $(echo "$BINARY_MAP" | jq -r ".\"$CRATE\""); do
+              strip "target/${{ matrix.job.target }}/release/$BIN"
+            done
           done
 
       - name: Strip release binary aarch64-linux-gnu
@@ -147,8 +174,10 @@ jobs:
         working-directory: forc
         run: |
           STRIP_ARGS=""
-          for BINARY in ${{ env.BINARIES }}; do
-            STRIP_ARGS+=" /target/aarch64-unknown-linux-gnu/release/$BINARY"
+          for CRATE in ${{ env.CRATES }}; do
+            for BIN in $(echo "$BINARY_MAP" | jq -r ".\"$CRATE\""); do
+              STRIP_ARGS+=" /target/aarch64-unknown-linux-gnu/release/$BIN"
+            done
           done
           docker run --rm -v \
           "$PWD/target:/target:Z" \
@@ -159,8 +188,10 @@ jobs:
         if: matrix.job.os == 'macos-latest'
         working-directory: forc
         run: |
-          for BINARY in ${{ env.BINARIES }}; do
-            strip -x "target/${{ matrix.job.target }}/release/$BINARY"
+          for CRATE in ${{ env.CRATES }}; do
+            for BIN in $(echo "$BINARY_MAP" | jq -r ".\"$CRATE\""); do
+              strip -x "target/${{ matrix.job.target }}/release/$BIN"
+            done
           done
 
       - name: Prep and upload assets
@@ -170,12 +201,14 @@ jobs:
           VERSIONS_JSON: ${{ needs.prepare-release.outputs.versions_json }}
         run: |
           echo 'ALL_ARCHIVES<<EOF' >> $GITHUB_ENV
-          for BINARY in ${{ env.BINARIES }}; do
-            VERSION=$(echo "$VERSIONS_JSON" | jq -r ".\"$BINARY\"")
-            ARTIFACT="${BINARY}-${VERSION}+nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}-${{ matrix.job.simple_target }}"
+          for CRATE in ${{ env.CRATES }}; do
+            VERSION=$(echo "$VERSIONS_JSON" | jq -r ".\"$CRATE\"")
+            ARTIFACT="${CRATE}-${VERSION}+nightly.${{ inputs.date }}.${{ needs.prepare-release.outputs.commit_hash }}-${{ matrix.job.simple_target }}"
             ZIP_FILE_NAME="$ARTIFACT.tar.gz"
             mkdir -pv "$ARTIFACT"
-            cp "target/${{ matrix.job.target }}/release/$BINARY" "$ARTIFACT"
+            for BIN in $(echo "$BINARY_MAP" | jq -r ".\"$CRATE\""); do
+              cp "target/${{ matrix.job.target }}/release/$BIN" "$ARTIFACT"
+            done
             tar -czvf "$ZIP_FILE_NAME" "$ARTIFACT"
             echo "forc/$ZIP_FILE_NAME" >> $GITHUB_ENV
           done
