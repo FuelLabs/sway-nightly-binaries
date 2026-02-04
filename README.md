@@ -12,7 +12,7 @@ These binaries are made available through [fuelup].
 |--------|------------|
 | `forc` and related binaries | [sway] |
 | `fuel-core` | [fuel-core] |
-| `forc-wallet`, `forc-crypto`, `forc-node` | [forc] |
+| `forc-wallet`, `forc-crypto`, `forc-node`, `forc-client` | [forc] |
 
 [sway]: https://github.com/FuelLabs/sway
 [fuel-core]: https://github.com/FuelLabs/fuel-core
