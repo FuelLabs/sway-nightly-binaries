@@ -40,8 +40,6 @@ runs:
         file: fuel-core-ci/ci/Dockerfile.${{ inputs.target }}-clang
         tags: ${{ inputs.cross_image }}:latest
         load: true
-        cache-from: type=gha,scope=cross-${{ inputs.target }}
-        cache-to: type=gha,mode=max,scope=cross-${{ inputs.target }}
 
     - name: Configure Cross.toml for custom image and extra deps
       if: ${{ inputs.cross_image != '' }}
