@@ -17,7 +17,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   REGISTRY: ghcr.io
-  RUST_VERSION: 1.90.0
+  # Keep this in sync with FuelLabs/forc rust-toolchain.toml.
+  RUST_VERSION: 1.93.0
   # Define workspace crates here - everything else is derived from this list
   # Note: Some crates (e.g., forc-client) produce multiple binaries via [[bin]] sections
   CRATES: "forc-wallet forc-crypto forc-node forc-client"
