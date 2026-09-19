@@ -18,7 +18,6 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
   REGISTRY: ghcr.io
-  RUST_VERSION: 1.93.0
 
 jobs:
   prepare-release:
@@ -63,7 +62,6 @@ jobs:
     runs-on: ${{ matrix.job.os }}
     # Only do this job if publishing a release
     needs: prepare-release
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -92,13 +90,26 @@ jobs:
           repository: fuellabs/fuel-core
           path: fuel-core
 
+      - name: Read fuel-core Rust toolchain
+        id: rust-toolchain
+        run: |
+          python3 - <<'PY'
+          import os
+          import tomllib
+
+          with open("fuel-core/rust-toolchain.toml", "rb") as source:
+              channel = tomllib.load(source)["toolchain"]["channel"]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              print(f"channel={channel}", file=output)
+          PY
+
       - name: Setup cross build environment
         uses: ./.github/actions/setup-cross-build
         with:
           target: ${{ matrix.job.target }}
           cross_image: ${{ matrix.job.cross_image }}
           os: ${{ matrix.job.os }}
-          rust_version: ${{ env.RUST_VERSION }}
+          rust_version: ${{ steps.rust-toolchain.outputs.channel }}
 
       - name: Install cargo-edit
         working-directory: fuel-core
