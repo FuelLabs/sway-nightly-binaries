@@ -136,7 +136,7 @@ jobs:
 
       - name: Install cargo-edit
         working-directory: forc
-        run: cargo install cargo-edit --locked
+        run: cargo install cargo-edit@0.13.13 --locked
 
       - name: Bump versions and add nightly pre-release tags
         working-directory: forc

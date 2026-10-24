@@ -113,7 +113,7 @@ jobs:
 
       - name: Install cargo-edit
         working-directory: fuel-core
-        run: cargo install cargo-edit
+        run: cargo install cargo-edit@0.13.13 --locked
 
       - name: Bump patch version and add nightly pre-release tag
         working-directory: fuel-core
